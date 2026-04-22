@@ -1513,7 +1513,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-print-gg').addEventListener('click', () => {
                 let printContent = `
                     <style>
-                        @page { size: letter portrait; margin: 12mm; }
+                        @page { size: letter portrait; margin: 0; }
                         @media print { 
                             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
                             table { page-break-inside: auto; zoom: 95%; }
@@ -1529,11 +1529,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         th.header-group { background-color: #e2e8f0; font-weight: 800; padding: 6px; color: #0f172a; font-size: 11px; text-transform: uppercase; }
                         td.student-name { text-align: left; font-weight: 700; white-space: nowrap; padding-left: 8px; font-size: 11.5px; }
                     </style>
-                    <div style="padding: 0;">
+                    <div style="padding: 12mm;">
                         <h2>Boletín General de Calificaciones</h2>
                         <div class="header-row">
                             <div class="header-col">
                                 <span class="info-text">Unidad Educativa: ${document.querySelector('.institution-name-display') ? document.querySelector('.institution-name-display').textContent : 'No definida'}</span>
+                                <span class="info-text">Nivel: Secundario</span>
                                 <span class="info-text" style="color: #0f172a; font-weight: 800;">Curso: ${course} "${parallel}"</span>
                             </div>
                             <div class="header-col" style="text-align: right;">
@@ -1840,7 +1841,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <html><head>
                     <title>Reporte Anual - ${course} "${parallel}"</title>
                     <style>
-                        @page { size: letter landscape; margin: 8mm; }
+                        @page { size: letter landscape; margin: 0; }
                         @media print { 
                             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
                             table { page-break-inside: auto; }
@@ -1870,10 +1871,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         .rojo { color: #dc2626 !important; font-weight: 800; }
                     </style>
                     </head><body>
+                    <div style="padding: 8mm;">
                     <h2>Cuadro Centralizador Final de Calificaciones Anuales</h2>
                     <div class="header-row">
                         <div class="header-col">
                             <span class="info-text">Unidad Educativa: ${localStorage.getItem('instName') || 'No definida'}</span>
+                            <span class="info-text">Nivel: Secundario</span>
                             <span class="info-text" style="color: #0f172a; font-weight: 800;">Curso: ${course} "${parallel}"</span>
                         </div>
                         <div class="header-col" style="text-align: right;">
@@ -1932,6 +1935,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="margin-top: 60px; text-align: center; width: 100%;">
                         <p style="margin-bottom: 5px;">_____________________________________</p>
                         <p>Firma y Sello</p>
+                    </div>
                     </div>
                 </body></html>`;
 
