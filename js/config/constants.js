@@ -2,18 +2,15 @@ export const ACADEMIC_AREAS = [
     "Comunicación y Lenguajes",
     "Lengua Extranjera",
     "Ciencias Sociales",
-    "Música",
-    "Artes Plásticas",
     "Educación Física",
-    "Matemáticas",
+    "Educación Musical",
+    "Artes Plásticas",
+    "Matemática",
     "Tecnología",
+    "Ciencias Nat Bio-Geo",
     "Física",
     "Química",
-    "Ciencias Naturales Biología",
-    "Filosofía / Psicología",
-    "Valores y Religiones"
+    "Cosmovisiones, Filo-Soc",
+    "Valores, Esp y Rel"
 ];
 
-export const COURSES = ["1ro", "2do", "3ro", "4to", "5to", "6to"];
-
-export const PARALLELS = ["A", "B", "C", "D", "E", "F"];

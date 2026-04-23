@@ -1,7 +1,7 @@
 import { db } from './db.js';
 window.db = db;
 
-import { ACADEMIC_AREAS, COURSES, PARALLELS } from './config/constants.js';
+import { ACADEMIC_AREAS } from './config/constants.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const authSection = document.getElementById('auth-section');
@@ -102,13 +102,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!view) return;
             document.querySelectorAll('.sidebar-menu a').forEach(el => el.classList.remove('active'));
             e.currentTarget.classList.add('active');
-            
+
             // Cerrar menú en móviles al seleccionar una vista
             if (window.innerWidth <= 768 && sidebar && sidebarOverlay) {
                 sidebar.classList.remove('active');
                 sidebarOverlay.classList.remove('active');
             }
-            
+
             loadView(view);
         });
     });
@@ -166,16 +166,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function getAvailableCourses() {
+        const students = window.db.getStudents();
+        const courses = new Set(students.map(s => s.course).filter(c => c && c.trim() !== ''));
+        return Array.from(courses).sort((a, b) => {
+            const courseOrder = { "1ro": 1, "2do": 2, "3ro": 3, "4to": 4, "5to": 5, "6to": 6 };
+            const cA = a.split(' ')[0];
+            const cB = b.split(' ')[0];
+            const orderA = courseOrder[cA] || 99;
+            const orderB = courseOrder[cB] || 99;
+            if (orderA !== orderB) return orderA - orderB;
+            return a.localeCompare(b);
+        });
+    }
+
     function sortStudents(arr) {
         const courseOrder = { "1ro": 1, "2do": 2, "3ro": 3, "4to": 4, "5to": 5, "6to": 6 };
         return arr.sort((a, b) => {
-            const courseA = courseOrder[a.course] || 99;
-            const courseB = courseOrder[b.course] || 99;
-            if (courseA !== courseB) return courseA - courseB;
+            const cA = a.course ? a.course.split(' ')[0] : "";
+            const cB = b.course ? b.course.split(' ')[0] : "";
+            const orderA = courseOrder[cA] || 99;
+            const orderB = courseOrder[cB] || 99;
+            if (orderA !== orderB) return orderA - orderB;
 
-            const parallelA = a.parallel || "";
-            const parallelB = b.parallel || "";
-            if (parallelA !== parallelB) return parallelA.localeCompare(parallelB);
+            const pA = a.course || "";
+            const pB = b.course || "";
+            if (pA !== pB) return pA.localeCompare(pB);
 
             return a.fullName.localeCompare(b.fullName);
         });
@@ -200,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (uniqueFailedAreas === 2) twoFail++;
             else threePlusFail++;
 
-            const cName = `${s.course} "${s.parallel}"`;
+            const cName = s.course || "Sin Curso";
             if (!failuresByCourse[cName]) failuresByCourse[cName] = { totalStudents: 0, totalFailures: 0 };
             failuresByCourse[cName].totalStudents++;
             failuresByCourse[cName].totalFailures += uniqueFailedAreas > 0 ? 1 : 0;
@@ -208,20 +224,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         mainContent.innerHTML = `
             <div class="stats-grid">
-                <div class="stat-card" style="background: linear-gradient(145deg, #ffffff, #e0e7ff);">
-                    <h3>Total Estudiantes</h3>
-                    <p class="stat-num">${students.length}</p>
+                <div class="stat-card" style="background: linear-gradient(145deg, #ffffff, #f8fafc); border-left: 5px solid #1e40af; padding-left: 1.25rem;">
+                    <h3 style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Total Estudiantes</h3>
+                    <p class="stat-num" style="color: #1e40af;">${students.length}</p>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(145deg, #ffffff, #dcfce7);">
-                    <h3>Sin Áreas Reprobadas</h3>
+                <div class="stat-card" style="background: linear-gradient(145deg, #ffffff, #f8fafc); border-left: 5px solid #059669; padding-left: 1.25rem;">
+                    <h3 style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Sin Áreas Reprobadas</h3>
                     <p class="stat-num" style="color: #059669;">${zeroFail}</p>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(145deg, #ffffff, #fef9c3);">
-                    <h3>1 a 2 Áreas Reprobadas</h3>
+                <div class="stat-card" style="background: linear-gradient(145deg, #ffffff, #f8fafc); border-left: 5px solid #d97706; padding-left: 1.25rem;">
+                    <h3 style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; margin-bottom: 0.5rem;">1 a 2 Áreas Reprobadas</h3>
                     <p class="stat-num" style="color: #d97706;">${oneFail + twoFail}</p>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(145deg, #ffffff, #fee2e2);">
-                    <h3>Mas de 3 Áreas Reprobadas</h3>
+                <div class="stat-card" style="background: linear-gradient(145deg, #ffffff, #f8fafc); border-left: 5px solid #dc2626; padding-left: 1.25rem;">
+                    <h3 style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Mas de 3 Áreas Reprobadas</h3>
                     <p class="stat-num" style="color: #dc2626;">${threePlusFail}</p>
                 </div>
             </div>
@@ -283,8 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <tr>
                             <th style="width: 5%">N°</th>
                             <th style="width: 30%">Apellidos y Nombres</th>
-                            <th style="width: 10%">Curso</th>
-                            <th style="width: 10%">Paralelo</th>
+                            <th style="width: 20%">Curso y Paralelo</th>
                             <th style="width: 25%">Asesor / Observación</th>
                             <th style="width: 20%; text-align: center;">Acciones</th>
                         </tr>
@@ -299,14 +314,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentGroup = '';
         let listNumber = 1;
         students.forEach(s => {
-            const groupCode = `${s.course}-${s.parallel}`;
-            const groupName = `${s.course} "${s.parallel}"`;
+            const groupCode = s.course || 'Sin Curso';
+            const groupName = s.course || 'Sin Curso';
             if (currentGroup !== groupCode) {
                 currentGroup = groupCode;
                 listNumber = 1;
                 html += `
                 <tr class="bg-gray-100 group-header" data-group="${groupCode}">
-                    <td colspan="5" class="font-bold text-primary" style="background-color: #f1f5f9; padding: 0.5rem; vertical-align: middle;">Curso: ${groupName}</td>
+                    <td colspan="4" class="font-bold text-primary" style="background-color: #f1f5f9; padding: 0.5rem; vertical-align: middle;">Curso: ${groupName}</td>
                     <td style="background-color: #f1f5f9; padding: 0.5rem; text-align: right;">
                         <button class="btn btn-sm btn-secondary btn-toggle-group" data-group="${groupCode}">Mostrar Lista</button>
                     </td>
@@ -321,15 +336,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="text-center text-muted font-bold">${listNumber++}</td>
                     <td class="font-bold" style="padding-left: 1rem;">${s.fullName}</td>
                     <td>${s.course}</td>
-                    <td>${s.parallel}</td>
                     <td>
                         ${advHtml}
                         <div style="font-size: 0.85rem; line-height: 1.2; padding-top: 2px; ${obsStyle}">${obsText}</div>
                     </td>
                     <td style="text-align: center;">
-                        <button class="btn btn-sm btn-profile-student" data-id="${s.id}" style="margin-right: 4px; background-color: #0ea5e9; color: white; padding: 0.4rem; font-size: 1.1rem; border-radius: 6px;" title="Ver perfil">👤</button>
-                        <button class="btn btn-sm btn-primary btn-edit-student" data-id="${s.id}" style="margin-right: 4px; padding: 0.4rem; font-size: 1.1rem; border-radius: 6px;" title="Editar">✏️</button>
-                        <button class="btn btn-sm btn-danger btn-del-student" data-id="${s.id}" style="padding: 0.4rem; font-size: 1.1rem; border-radius: 6px;" title="Eliminar">🗑️</button>
+                        <button class="btn btn-sm btn-profile-student" data-id="${s.id}" style="margin-right: 4px; background-color: #0ea5e9; color: white; padding: 0.5rem; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;" title="Ver perfil">
+                            <svg style="pointer-events: none;" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        </button>
+                        <button class="btn btn-sm btn-primary btn-edit-student" data-id="${s.id}" style="margin-right: 4px; padding: 0.5rem; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;" title="Editar">
+                            <svg style="pointer-events: none;" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        </button>
+                        <button class="btn btn-sm btn-danger btn-del-student" data-id="${s.id}" style="padding: 0.5rem; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;" title="Eliminar">
+                            <svg style="pointer-events: none;" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
                     </td>
                 </tr>
             `;
@@ -393,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="flex: 1; min-width: 250px;">
                                     <h4 style="margin: 0 0 8px 0; color: #0f172a; font-size: 1.25rem; font-weight: 700;">${student.fullName}</h4>
                                     <div style="font-size: 0.95rem; color: #475569; line-height: 1.5;">
-                                        <div style="margin-bottom: 4px;"><strong>Curso:</strong> <span style="color: #1e293b; font-weight: 500;">${student.course} "${student.parallel}"</span></div>
+                                        <div style="margin-bottom: 4px;"><strong>Curso:</strong> <span style="color: #1e293b; font-weight: 500;">${student.course}</span></div>
                                         <div style="margin-bottom: 4px;"><strong>Asesor:</strong> <span style="color: #1e293b; font-weight: 500;">${student.advisorName && student.advisorName !== '' ? student.advisorName : 'No asignado'}</span></div>
                                         <div><strong>Observación:</strong> <span style="color: #64748b; font-style: italic;">${student.observations && student.observations !== '-' ? student.observations : 'Ninguna'}</span></div>
                                     </div>
@@ -462,16 +482,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                                 <div style="display: flex; gap: 15px; margin-bottom: 12px;">
                                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                        <label class="text-sm font-bold">Curso</label>
-                                        <select id="edit-course" class="input" style="width: 100%;">
-                                            ${COURSES.map(c => `<option value="${c}" ${student.course === c ? 'selected' : ''}>${c}</option>`).join('')}
-                                        </select>
-                                    </div>
-                                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                        <label class="text-sm font-bold">Paralelo</label>
-                                        <select id="edit-parallel" class="input" style="width: 100%;">
-                                            ${PARALLELS.map(p => `<option value="${p}" ${student.parallel === p ? 'selected' : ''}>${p}</option>`).join('')}
-                                        </select>
+                                        <label class="text-sm font-bold">Curso y Paralelo</label>
+                                        <input id="edit-course" class="input" value="${student.course}" placeholder="Ej: 1ro A" style="width: 100%;" required>
                                     </div>
                                 </div>
                                 <div class="form-group" style="margin-bottom: 12px;">
@@ -495,8 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                             return {
                                 fullName: fullName,
-                                course: document.getElementById('edit-course').value,
-                                parallel: document.getElementById('edit-parallel').value,
+                                course: document.getElementById('edit-course').value.trim(),
                                 advisorName: document.getElementById('edit-advisor').value.trim(),
                                 observations: document.getElementById('edit-observations').value.trim() || '-'
                             }
@@ -506,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             try {
                                 window.db.updateStudent(id, result.value);
                                 Swal.fire('Guardado', 'Los datos han sido actualizados con seguridad.', 'success').then(() => renderStudents());
-                            } catch(e) {
+                            } catch (e) {
                                 Swal.fire('Acción Denegada', e.message, 'error').then(() => btn.click());
                             }
                         }
@@ -587,21 +598,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <label>Apellidos y Nombres</label>
                         <input type="text" name="fullName" class="input" required>
                     </div>
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label>Curso</label>
-                            <select name="course" class="input" required>
-                                <option value="" disabled selected>Seleccione</option>
-                                ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Paralelo</label>
-                            <select name="parallel" class="input" required>
-                                <option value="" disabled selected>Seleccione</option>
-                                ${PARALLELS.map(p => `<option value="${p}">${p}</option>`).join('')}
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label>Curso y Paralelo</label>
+                        <input type="text" name="course" class="input" placeholder="Ej: 1ro A" required>
                     </div>
                     <div class="form-group">
                         <label>Observación</label>
@@ -621,12 +620,11 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 window.db.addStudent({
                     fullName: fd.get('fullName').trim(),
-                    course: fd.get('course'),
-                    parallel: fd.get('parallel'),
+                    course: fd.get('course').trim(),
                     observations: fd.get('observations') || '-'
                 });
                 Swal.fire('Éxito', 'Estudiante registrado de forma segura', 'success').then(() => loadView('students'));
-            } catch(e) {
+            } catch (e) {
                 Swal.fire('Error de Seguridad', e.message, 'error');
             }
         });
@@ -636,21 +634,9 @@ document.addEventListener('DOMContentLoaded', () => {
         mainContent.innerHTML = `
             <div class="card max-w-2xl mx-auto">
                 <form id="form-mass">
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label>Curso</label>
-                            <select name="course" class="input" required>
-                                <option value="" disabled selected>Seleccione</option>
-                                ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Paralelo</label>
-                            <select name="parallel" class="input" required>
-                                <option value="" disabled selected>Seleccione</option>
-                                ${PARALLELS.map(p => `<option value="${p}">${p}</option>`).join('')}
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label>Curso y Paralelo</label>
+                        <input type="text" name="course" class="input" placeholder="Ej: 1ro A" required>
                     </div>
                     <div class="form-group">
                         <label>Nombre del Asesor de Curso</label>
@@ -671,17 +657,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('form-mass').addEventListener('submit', (e) => {
             e.preventDefault();
             const fd = new FormData(e.target);
-            const course = fd.get('course');
-            const parallel = fd.get('parallel');
+            const course = fd.get('course').trim();
             const advisorName = fd.get('advisorName').trim();
             const list = fd.get('studentsList').split(/\r?\n/).filter(l => l.trim().length > 0);
 
             try {
                 list.forEach(name => {
-                    window.db.addStudent({ fullName: name.trim(), course, parallel, advisorName, observations: '-' });
+                    window.db.addStudent({ fullName: name.trim(), course, advisorName, observations: '-' });
                 });
                 Swal.fire('Éxito', `Se registraron ${list.length} estudiantes correctamente.`, 'success').then(() => loadView('students'));
-            } catch(e) {
+            } catch (e) {
                 Swal.fire('Error de Seguridad', e.message, 'error');
             }
         });
@@ -691,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPreliminary() {
         mainContent.innerHTML = `
             <div class="card mb-2">
-                <div class="grid grid-3 items-end">
+                <div class="grid grid-2 items-end">
                     <div class="form-group mb-0">
                         <label>Área Académica</label>
                         <select id="sel-area" class="input">
@@ -700,36 +685,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         </select>
                     </div>
                     <div class="form-group mb-0">
-                        <label>Curso</label>
+                        <label>Curso y Paralelo</label>
                         <select id="sel-course" class="input">
-                            <option value="">Seleccione Curso</option>
-                            ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            <option value="">Seleccione Curso y Paralelo</option>
+                            ${getAvailableCourses().map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="form-group mb-0">
-                        <label>Paralelo</label>
-                        <select id="sel-parallel" class="input">
-                            <option value="">Seleccione Paralelo</option>
-                            ${PARALLELS.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-1">
-                    <button class="btn btn-primary" id="btn-load-preliminary" style="width: 100%;">Cargar Lista</button>
                 </div>
             </div>
             <div id="preliminary-container"></div>
         `;
 
-        document.getElementById('btn-load-preliminary').addEventListener('click', () => {
+        const loadPreliminaryData = () => {
             const area = document.getElementById('sel-area').value;
             const course = document.getElementById('sel-course').value;
-            const parallel = document.getElementById('sel-parallel').value;
 
-            if (!area || !course || !parallel) return Swal.fire('Error', 'Seleccione área, curso y paralelo', 'error');
+            if (!area || !course) {
+                document.getElementById('preliminary-container').innerHTML = '';
+                return;
+            }
 
             const allStudents = window.db.getStudents();
-            const students = sortStudents(allStudents.filter(s => s.course === course && s.parallel === parallel));
+            const students = sortStudents(allStudents.filter(s => s.course === course));
             const prelims = window.db.getPreliminaries();
 
             if (students.length === 0) {
@@ -739,14 +716,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let html = `
                 <div class="card">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
-                        <h3 class="text-primary" style="margin: 0;">Rendimiento Preliminar - ${course} "${parallel}"</h3>
-                        <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3); text-align: right;">
-                            <span style="opacity: 0.85; font-size: 0.75rem; display: block; line-height: 1; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">Área Seleccionada</span>
-                            ${area}
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <h3 style="color: #1e293b; margin: 0; padding-bottom: 2px; border-bottom: 2px solid #8b5cf6;">Rendimiento Académico (Preliminar)</h3>
+                                <span style="font-size: 1rem; color: #475569; margin-left: 10px;">Curso y Paralelo: <strong>${course}</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 15px; flex-grow: 1; justify-content: flex-end;">
+                                <span style="background-color: #8b5cf6; color: white; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 0.95em; box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3); border: 1px solid #7c3aed;">
+                                    ${area}
+                                </span>
+                                <button id="btn-save-preliminary" class="btn btn-secondary flex items-center justify-center gap-1" style="font-size: 1.05rem; padding: 8px 15px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25); min-width: max-content; background-color: #0284c7; border-color: #0284c7;">
+                                    <svg width="20" height="20" fill="none" class="mr-1" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                                   Guardar 
+                                </button>
+                            </div>
                         </div>
+                        <p class="text-sm text-muted mb-0 mt-1">Permite registrar el rendimiento preliminar de los estudiantes. Marque con "X" a los estudiantes que presentan bajo rendimiento en el trimestre correspondiente y presione <strong>Guardar</strong>.</p>
                     </div>
-                    <p class="text-sm text-muted mb-1">Marque con "X" a los estudiantes que presentan bajo rendimiento en el trimestre correspondiente. <span class="badge badge-warning">Auto-guardado independiente</span></p>
                     <table class="table">
                         <thead>
                             <tr>
@@ -783,43 +770,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             });
 
-            html += `</tbody></table></div>`;
+            html += `</tbody></table>
+            </div>`;
+
             document.getElementById('preliminary-container').innerHTML = html;
 
-            document.querySelectorAll('.cb-prelim').forEach(cb => {
-                cb.addEventListener('change', (e) => {
-                    const studentId = e.target.dataset.id;
-                    const trim = e.target.dataset.trim;
-                    const isChecked = e.target.checked;
+            document.getElementById('btn-save-preliminary').addEventListener('click', () => {
+                const checkboxes = document.querySelectorAll('.cb-prelim');
+                checkboxes.forEach(cb => {
+                    const studentId = parseInt(cb.dataset.id);
+                    const trim = parseInt(cb.dataset.trim);
+                    const isChecked = cb.checked;
 
                     window.db.upsertPreliminary({
-                        studentId: parseInt(studentId),
+                        studentId: studentId,
                         area: area,
-                        trimester: parseInt(trim),
+                        trimester: trim,
                         preliminary: isChecked
                     });
                 });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Guardado exitoso!',
+                    text: 'El rendimiento preliminar ha sido registrado correctamente.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             });
-        });
+        };
+
+        document.getElementById('sel-area').addEventListener('change', loadPreliminaryData);
+        document.getElementById('sel-course').addEventListener('change', loadPreliminaryData);
     }
 
     // --- GRADES ---
     function renderGrades() {
         mainContent.innerHTML = `
             <div class="card mb-2">
-                <div class="grid grid-3 items-end">
+                <div class="grid grid-2 items-end">
                     <div class="form-group mb-0">
-                        <label>Curso</label>
+                        <label>Curso y Paralelo</label>
                         <select id="grade-course" class="input">
-                            <option value="">Seleccione Curso</option>
-                            ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Paralelo</label>
-                        <select id="grade-parallel" class="input">
-                            <option value="">Seleccione Paralelo</option>
-                            ${PARALLELS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            <option value="">Seleccione Curso y Paralelo</option>
+                            ${getAvailableCourses().map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group mb-0">
@@ -840,12 +834,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('btn-load-grades').addEventListener('click', () => {
             const course = document.getElementById('grade-course').value;
-            const parallel = document.getElementById('grade-parallel').value;
             const trimester = document.getElementById('grade-trimester').value;
 
-            if (!course || !parallel || !trimester) return Swal.fire('Error', 'Seleccione curso, paralelo y trimestre', 'error');
+            if (!course || !trimester) return Swal.fire('Error', 'Seleccione curso y trimestre', 'error');
 
-            const students = sortStudents(window.db.getStudents().filter(s => s.course === course && s.parallel === parallel));
+            const students = sortStudents(window.db.getStudents().filter(s => s.course === course));
             const records = window.db.getRecords();
             const prelims = window.db.getPreliminaries();
 
@@ -858,16 +851,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Comunicación y Lenguajes": "#ef4444",
                 "Lengua Extranjera": "#3b82f6",
                 "Ciencias Sociales": "#22c55e",
-                "Música": "#a855f7",
-                "Artes Plásticas": "#f97316",
                 "Educación Física": "#8b0174ff",
-                "Matemáticas": "#14b8a6",
+                "Educación Musical": "#a855f7",
+                "Artes Plásticas": "#f97316",
+                "Matemática": "#14b8a6",
                 "Tecnología": "#6366f1",
+                "Ciencias Nat Bio-Geo": "#10b981",
                 "Física": "#06b6d4",
                 "Química": "#ec4899",
-                "Ciencias Naturales Biología": "#10b981",
-                "Filosofía / Psicología": "#f43f5e",
-                "Valores y Religiones": "#f59e0b"
+                "Cosmovisiones, Filo-Soc": "#f43f5e",
+                "Valores, Esp y Rel": "#f59e0b"
             };
 
             let html = `
@@ -898,7 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </style>
                 <div class="card" style="overflow-x: auto;">
                     <h3 class="mb-1 text-secondary" style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                        <span>Áreas de Bajo Rendimiento Reportadas - ${course} "${parallel}"</span>
+                        <span>Áreas de Bajo Rendimiento Reportadas - ${course}</span>
                         <span class="trim-highlight">${trimester}° Trimestre</span>
                     </h3>
                     <p class="text-sm text-muted mb-1">Las áreas con bajo rendimiento o marcadas preliminarmente en riesgo se visualizan interactivamente mediante bloques proporcionales. Pase el cursor sobre cada área para enfocarla.</p>
@@ -960,19 +953,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderViewGrades() {
         mainContent.innerHTML = `
             <div class="card mb-2">
-                <div class="grid grid-3 items-end">
+                <div class="grid grid-2 items-end">
                     <div class="form-group mb-0">
-                        <label>Curso</label>
+                        <label>Curso y Paralelo</label>
                         <select id="vg-course" class="input">
-                            <option value="">Seleccione Curso</option>
-                            ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Paralelo</label>
-                        <select id="vg-parallel" class="input">
-                            <option value="">Seleccione Paralelo</option>
-                            ${PARALLELS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            <option value="">Seleccione Curso y Paralelo</option>
+                            ${getAvailableCourses().map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group mb-0">
@@ -993,13 +979,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('btn-load-vg').addEventListener('click', () => {
             const course = document.getElementById('vg-course').value;
-            const parallel = document.getElementById('vg-parallel').value;
             const trimester = document.getElementById('vg-trimester').value;
 
-            if (!course || !parallel || !trimester) return Swal.fire('Error', 'Seleccione curso, paralelo y trimestre', 'error');
+            if (!course || !trimester) return Swal.fire('Error', 'Seleccione curso y trimestre', 'error');
 
             const allStudents = window.db.getStudents();
-            const students = sortStudents(allStudents.filter(s => s.course === course && s.parallel === parallel));
+            const students = sortStudents(allStudents.filter(s => s.course === course));
             const records = window.db.getRecords();
 
             if (students.length === 0) {
@@ -1034,8 +1019,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 </style>
                 <div class="card" style="overflow-x: auto; padding: 1.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 class="text-primary" style="margin: 0;">Cuadro Centralizador de Calificaciones - ${course} "${parallel}" | ${trimester}° Trimestre</h3>
-                        <button class="btn btn-warning btn-sm" id="btn-top-students"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg> Estudiantes Sobresalientes</button>
+                        <h3 class="text-primary" style="margin: 0;">Cuadro Centralizador de Calificaciones - ${course} | ${trimester}° Trimestre</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-warning btn-sm" id="btn-top-students"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg> Estudiantes Sobresalientes</button>
+                            <button id="btn-print-vg" class="btn btn-sm btn-secondary flex items-center gap-1">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                Imprimir
+                            </button>
+                        </div>
                     </div>
                     <table class="table table-vg" style="width: 100%; min-width: 1000px; border-collapse: collapse;">
                         <thead>
@@ -1105,26 +1096,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let listHtml = `<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px; text-align: left;">`;
                 top5.forEach((student, index) => {
-                    const bgColors = ['rgba(251, 191, 36, 0.15)', 'rgba(148, 163, 184, 0.15)', 'rgba(180, 83, 9, 0.15)', 'rgba(241, 245, 249, 1)', 'rgba(248, 250, 252, 1)'];
-                    const borderColors = ['#fbbf24', '#cbd5e1', '#b45309', '#e2e8f0', '#e2e8f0'];
-                    const fontColors = ['#d97706', '#475569', '#92400e', '#334155', '#475569'];
-                    const icons = index === 0 ? '🏆' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '🎖️'));
-
-                    const bg = bgColors[index] || bgColors[4];
-                    const border = borderColors[index] || borderColors[4];
-                    const fontColor = fontColors[index] || fontColors[4];
+                    const colors = [
+                        { bg: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '#fcd34d', text: '#b45309', icon: '#fbbf24', stroke: '#b45309' },
+                        { bg: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '#cbd5e1', text: '#475569', icon: '#e2e8f0', stroke: '#475569' },
+                        { bg: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', border: '#fdba74', text: '#c2410c', icon: '#f97316', stroke: '#9a3412' },
+                        { bg: '#ffffff', border: '#e2e8f0', text: '#64748b', icon: '#f8fafc', stroke: '#94a3b8' },
+                        { bg: '#ffffff', border: '#e2e8f0', text: '#64748b', icon: '#f8fafc', stroke: '#94a3b8' }
+                    ];
+                    const c = colors[index] || colors[4];
+                    const medalSVG = `
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 23L12 20L17 23V10H7V23Z" fill="${c.border}" stroke="${c.stroke}" stroke-width="1.5" stroke-linejoin="round"/>
+                            <circle cx="12" cy="9" r="8" fill="${c.icon}" stroke="${c.stroke}" stroke-width="1.5"/>
+                            <text x="12" y="12.5" text-anchor="middle" font-size="10" font-weight="800" fill="${c.stroke}" stroke="none" font-family="Inter, sans-serif">${index + 1}</text>
+                        </svg>`;
 
                     listHtml += `
-                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: ${bg}; border-left: 5px solid ${border}; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: transform 0.2s;">
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <span style="font-size: 1.8rem; line-height: 1;">${icons}</span>
-                                <div style="display: flex; flex-direction: column;">
-                                    <span style="font-weight: 700; font-size: 1.05rem; color: #0f172a;">${student.name}</span>
-                                    <span style="font-size: 0.80rem; font-weight: 600; color: ${fontColor}; text-transform: uppercase; letter-spacing: 0.5px;">Top ${index + 1}</span>
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: ${c.bg}; border: 1px solid ${c.border}; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 14px; overflow: hidden;">
+                                <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid ${c.border};">
+                                    ${medalSVG}
+                                </div>
+                                <div style="display: flex; flex-direction: column; overflow: hidden;">
+                                    <span style="font-weight: 800; font-size: 1.05rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${student.name}">${student.name}</span>
+                                    <span style="font-size: 0.75rem; font-weight: 700; color: ${c.text}; text-transform: uppercase; letter-spacing: 0.5px;">Puesto ${index + 1}</span>
                                 </div>
                             </div>
-                            <div style="display: flex; align-items: baseline; gap: 4px; background: white; padding: 6px 14px; border-radius: 9999px; font-weight: 800; color: ${fontColor}; font-size: 1.25rem; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                                ${student.average} <span style="font-size: 0.70rem; font-weight: 700; opacity: 0.7; letter-spacing: 0.5px;">Pts</span>
+                            <div style="display: flex; align-items: baseline; justify-content: center; gap: 3px; background: white; padding: 6px 14px; border-radius: 20px; font-weight: 900; color: ${c.text}; font-size: 1.25rem; border: 2px solid ${c.border}; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; white-space: nowrap;">
+                                ${student.average} <span style="font-size: 0.75rem; font-weight: 800; opacity: 0.8; letter-spacing: 0.5px;">Pts</span>
                             </div>
                         </div>
                     `;
@@ -1143,6 +1142,139 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             });
+
+            document.getElementById('btn-print-vg').addEventListener('click', () => {
+                const advisorName = students.length > 0 && students[0].advisorName && students[0].advisorName !== '-' ? students[0].advisorName : 'Sin Asignar';
+                const scale = students.length > 18 ? 18 / students.length : 1;
+                const printWindow = window.open('', '_blank');
+                let printContent = `
+                    <html><head>
+                    <title>Reporte ${trimester}° Trimestre - ${course}</title>
+                    <style>
+                        :root {
+                            --print-scale: ${scale};
+                        }
+                        @page { size: letter landscape; margin: 0; }
+                        @media print { 
+                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+                            .print-wrapper {
+                                zoom: var(--print-scale);
+                            }
+                        }
+                        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 11px; margin: 0; color: #1e293b; background: white; line-height: 1.15; }
+                        h2 { text-align: center; text-transform: uppercase; margin: 0 0 6px 0; font-size: 18px; color: #0f172a; letter-spacing: 0.5px; font-weight: 800; }
+                        .header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #cbd5e1; }
+                        .header-col { display: flex; flex-direction: column; gap: 3px; }
+                        .info-text { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                        th, td { border: 1px solid #94a3b8; padding: 4px 2px; text-align: center; line-height: 1.1; }
+                        th.header-group { background-color: #f1f5f9; font-weight: 800; padding: 5px; color: #0f172a; font-size: 12px; text-transform: uppercase; }
+                        th.vertical-text {
+                            writing-mode: vertical-rl;
+                            transform: rotate(180deg);
+                            white-space: nowrap;
+                            height: 130px;
+                            max-height: 130px;
+                            font-size: 11px;
+                            padding: 4px 0 !important;
+                            background-color: #f8fafc;
+                            color: #334155;
+                            font-weight: 800;
+                        }
+                        td.student-name { text-align: left; font-weight: 700; white-space: nowrap; padding-left: 6px; font-size: 13px; }
+                        .rojo { color: #dc2626 !important; font-weight: 800; }
+                    </style>
+                    </head><body>
+                    <div class="print-wrapper" style="padding: 8mm; box-sizing: border-box;">
+                    <h2>Cuadro Centralizador de Calificaciones - ${trimester}° Trimestre</h2>
+                    <div class="header-row">
+                        <div class="header-col">
+                            <span class="info-text">Unidad Educativa: ${window.db.getSettings().unitName || 'No definida'}</span>
+                            <span class="info-text">Nivel: Secundario</span>
+                            <span class="info-text" style="color: #0f172a; font-weight: 800;">Curso: ${course}</span>
+                        </div>
+                        <div class="header-col" style="text-align: right;">
+                            <span class="info-text">Gestión: ${new Date().getFullYear()}</span>
+                            <span class="info-text" style="color: #0f172a; font-weight: 800; border-bottom: 1px solid #0f172a; display: inline-block;">Asesor de Curso: ${advisorName}</span>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="width: 2%; font-size: 11px;">N°</th>
+                                <th rowspan="2" style="width: 25%; font-size: 11px;">APELLIDOS Y NOMBRES</th>
+                                <th colspan="${ACADEMIC_AREAS.length}" class="header-group">ÁREAS DE SABERES Y CONOCIMIENTOS</th>
+                                <th rowspan="2" class="vertical-text" style="background-color: #e0f2fe; color: #0369a1;">PROMEDIO DEL TRIMESTRE</th>
+                                <th rowspan="2" class="vertical-text" style="background-color: #fef2f2; color: #b91c1c;">ÁREAS REPROBADAS</th>
+                            </tr>
+                            <tr>
+                                ${ACADEMIC_AREAS.map(a => `<th class="vertical-text">${a}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                students.forEach((s, idx) => {
+                    let rHtml = `<tr><td>${idx + 1}</td><td class="student-name">${s.fullName}</td>`;
+                    let totalSuma = 0;
+                    let countAreas = 0;
+                    let areasReprobadas = 0;
+
+                    ACADEMIC_AREAS.forEach(area => {
+                        const rec = records.find(r => r.studentId === s.id && r.area === area && r.trimester === parseInt(trimester));
+                        const grade = (rec && rec.grade !== undefined && rec.grade !== "") ? parseInt(rec.grade) : "";
+
+                        if (grade !== "") {
+                            totalSuma += grade;
+                            countAreas++;
+                            if (grade < 51) areasReprobadas++;
+                        }
+                        const cssClass = (grade !== "" && grade < 51) ? 'class="rojo"' : '';
+                        rHtml += `<td ${cssClass}>${grade !== "" ? grade : '-'}</td>`;
+                    });
+
+                    let promGeneralNum = countAreas > 0 ? Math.round(totalSuma / countAreas) : 0;
+                    let promGeneral = promGeneralNum > 0 ? promGeneralNum : "-";
+
+                    rHtml += `
+                        <td style="background-color: #f0f9ff; color: #0369a1; font-weight: bold;">${promGeneral}</td>
+                        <td style="background-color: #fef2f2; color: ${areasReprobadas > 0 ? '#b91c1c' : '#94a3b8'}; font-weight: bold;">${areasReprobadas > 0 ? areasReprobadas : ''}</td>
+                    </tr>`;
+                    printContent += rHtml;
+                });
+
+                printContent += `
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 35px; display: flex; justify-content: space-around; width: 100%;">
+                        <div style="text-align: center;">
+                            <p style="margin-bottom: 5px; color: #0f172a;">__________________________________</p>
+                            <p style="color: #475569; font-size: 10px; font-weight: 700; text-transform: uppercase;">Firma del Docente / Asesor</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="margin-bottom: 5px; color: #0f172a;">__________________________________</p>
+                            <p style="color: #475569; font-size: 10px; font-weight: 700; text-transform: uppercase;">Firma y Sello Dirección</p>
+                        </div>
+                    </div>
+                    </div>
+                    </body></html>
+                `;
+
+                if (printWindow) {
+                    printWindow.document.write(printContent);
+                    printWindow.document.close();
+
+                    printWindow.onafterprint = () => { printWindow.close(); };
+
+                    setTimeout(() => {
+                        printWindow.focus();
+                        printWindow.print();
+                        if (printWindow) printWindow.close();
+                    }, 500);
+                } else {
+                    Swal.fire('Error', 'No se pudo abrir la ventana de impresión. Verifique los bloqueadores de ventanas emergentes (Pop-ups).', 'error');
+                }
+            });
         });
     }
 
@@ -1150,19 +1282,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPerformance() {
         mainContent.innerHTML = `
             <div class="card mb-2">
-                <div class="grid grid-3 items-end">
+                <div class="grid grid-2 items-end">
                     <div class="form-group mb-0">
-                        <label>Curso</label>
+                        <label>Curso y Paralelo</label>
                         <select id="perf-course" class="input">
-                            <option value="">Seleccione Curso</option>
-                            ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Paralelo</label>
-                        <select id="perf-parallel" class="input">
-                            <option value="">Seleccione Paralelo</option>
-                            ${PARALLELS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            <option value="">Seleccione Curso y Paralelo</option>
+                            ${getAvailableCourses().map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group mb-0">
@@ -1183,12 +1308,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('btn-load-perf').addEventListener('click', () => {
             const course = document.getElementById('perf-course').value;
-            const parallel = document.getElementById('perf-parallel').value;
             const trimester = document.getElementById('perf-trimester').value;
 
-            if (!course || !parallel || !trimester) return Swal.fire('Error', 'Seleccione curso, paralelo y trimestre', 'error');
+            if (!course || !trimester) return Swal.fire('Error', 'Seleccione curso y trimestre', 'error');
 
-            const students = sortStudents(window.db.getStudents().filter(s => s.course === course && s.parallel === parallel));
+            const students = sortStudents(window.db.getStudents().filter(s => s.course === course));
             const records = window.db.getRecords();
 
             if (students.length === 0) {
@@ -1200,16 +1324,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Comunicación y Lenguajes": "#ef4444",
                 "Lengua Extranjera": "#3b82f6",
                 "Ciencias Sociales": "#22c55e",
-                "Música": "#a855f7",
-                "Artes Plásticas": "#f97316",
                 "Educación Física": "#017732ff",
-                "Matemáticas": "#14b8a6",
+                "Educación Musical": "#a855f7",
+                "Artes Plásticas": "#f97316",
+                "Matemática": "#14b8a6",
                 "Tecnología": "#6366f1",
+                "Ciencias Nat Bio-Geo": "#10b981",
                 "Física": "#06b6d4",
                 "Química": "#ec4899",
-                "Ciencias Naturales Biología": "#10b981",
-                "Filosofía / Psicología": "#f43f5e",
-                "Valores y Religiones": "#f59e0b"
+                "Cosmovisiones, Filo-Soc": "#f43f5e",
+                "Valores, Esp y Rel": "#f59e0b"
             };
 
             let html = `
@@ -1240,7 +1364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </style>
                 <div class="card" style="overflow-x: auto;">
                     <h3 class="mb-1 text-secondary" style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                        <span>Rendimiento Estudiantil (Notas < 51) - ${course} "${parallel}"</span>
+                        <span>Rendimiento Estudiantil (Notas < 51) - ${course}</span>
                         <span class="trim-highlight">${trimester}° Trimestre</span>
                     </h3>
                     <p class="text-sm text-muted mb-1">Este análisis identifica de manera automática las calificaciones ya consolidadas que indican un bajo rendimiento. Pase el cursor para enfocar la materia.</p>
@@ -1299,7 +1423,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderGeneralGrades() {
         mainContent.innerHTML = `
             <div class="card mb-2">
-                <div class="grid grid-3 items-end">
+                <div class="grid grid-2 items-end">
                     <div class="form-group mb-0">
                         <label>Área Académica</label>
                         <select id="gg-area" class="input">
@@ -1308,17 +1432,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         </select>
                     </div>
                     <div class="form-group mb-0">
-                        <label>Curso</label>
+                        <label>Curso y Paralelo</label>
                         <select id="gg-course" class="input">
-                            <option value="">Seleccione Curso</option>
-                            ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Paralelo</label>
-                        <select id="gg-parallel" class="input">
-                            <option value="">Seleccione Paralelo</option>
-                            ${PARALLELS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            <option value="">Seleccione Curso y Paralelo</option>
+                            ${getAvailableCourses().map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </div>
                 </div>
@@ -1332,11 +1449,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-load-gg').addEventListener('click', () => {
             const area = document.getElementById('gg-area').value;
             const course = document.getElementById('gg-course').value;
-            const parallel = document.getElementById('gg-parallel').value;
 
-            if (!area || !course || !parallel) return Swal.fire('Error', 'Seleccione área, curso y paralelo', 'error');
+            if (!area || !course) return Swal.fire('Error', 'Seleccione área y curso', 'error');
 
-            const students = sortStudents(window.db.getStudents().filter(s => s.course === course && s.parallel === parallel));
+            const students = sortStudents(window.db.getStudents().filter(s => s.course === course));
             const records = window.db.getRecords();
 
             if (students.length === 0) {
@@ -1350,8 +1466,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <h3 style="color: #1e293b; margin: 0; padding-bottom: 2px; border-bottom: 2px solid #8b5cf6;">Registro General de Calificaciones</h3>
-                                <span style="font-size: 1rem; color: #475569; margin-left: 10px;">Curso: <strong>${course}</strong></span>
-                                <span style="font-size: 1rem; color: #475569; margin-left: 5px;">Paralelo: <strong>"${parallel}"</strong></span>
+                                <span style="font-size: 1rem; color: #475569; margin-left: 10px;">Curso y Paralelo: <strong>${course}</strong></span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 15px; flex-grow: 1; justify-content: flex-end;">
                                 <span style="background-color: #8b5cf6; color: white; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 0.95em; box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3); border: 1px solid #7c3aed;">
@@ -1511,31 +1626,36 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             document.getElementById('btn-print-gg').addEventListener('click', () => {
+                const scale = students.length > 25 ? 25 / students.length : 1;
                 let printContent = `
                     <style>
+                        :root {
+                            --print-scale: ${scale};
+                        }
                         @page { size: letter portrait; margin: 0; }
                         @media print { 
                             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
-                            table { page-break-inside: auto; zoom: 95%; }
-                            tr { page-break-inside: avoid; page-break-after: auto; }
+                            .print-wrapper {
+                                zoom: var(--print-scale);
+                            }
                         }
-                        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 11px; margin: 0; color: #1e293b; background: white; line-height: 1.2; }
-                        h2 { text-align: center; text-transform: uppercase; margin: 0 0 10px 0; font-size: 16px; color: #0f172a; letter-spacing: 0.5px; font-weight: 800; }
+                        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 12px; margin: 0; color: #1e293b; background: white; line-height: 1.25; }
+                        h2 { text-align: center; text-transform: uppercase; margin: 0 0 10px 0; font-size: 20px; color: #0f172a; letter-spacing: 0.5px; font-weight: 800; }
                         .header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #cbd5e1; }
                         .header-col { display: flex; flex-direction: column; gap: 4px; }
-                        .info-text { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+                        .info-text { font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
                         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                        th, td { border: 1px solid #94a3b8; padding: 5px 4px; text-align: center; }
-                        th.header-group { background-color: #e2e8f0; font-weight: 800; padding: 6px; color: #0f172a; font-size: 11px; text-transform: uppercase; }
-                        td.student-name { text-align: left; font-weight: 700; white-space: nowrap; padding-left: 8px; font-size: 11.5px; }
+                        th, td { border: 1px solid #94a3b8; padding: 6px 4px; text-align: center; }
+                        th.header-group { background-color: #e2e8f0; font-weight: 800; padding: 8px; color: #0f172a; font-size: 13px; text-transform: uppercase; }
+                        td.student-name { text-align: left; font-weight: 700; white-space: nowrap; padding-left: 8px; font-size: 14px; }
                     </style>
-                    <div style="padding: 12mm;">
+                    <div class="print-wrapper" style="padding: 12mm; box-sizing: border-box;">
                         <h2>Boletín General de Calificaciones</h2>
                         <div class="header-row">
                             <div class="header-col">
-                                <span class="info-text">Unidad Educativa: ${document.querySelector('.institution-name-display') ? document.querySelector('.institution-name-display').textContent : 'No definida'}</span>
+                                <span class="info-text">Unidad Educativa: ${window.db.getSettings().unitName || 'No definida'}</span>
                                 <span class="info-text">Nivel: Secundario</span>
-                                <span class="info-text" style="color: #0f172a; font-weight: 800;">Curso: ${course} "${parallel}"</span>
+                                <span class="info-text" style="color: #0f172a; font-weight: 800;">Curso: ${course}</span>
                             </div>
                             <div class="header-col" style="text-align: right;">
                                 <span class="info-text">Fecha de Impresión: ${new Date().toLocaleDateString('es-ES')}</span>
@@ -1593,15 +1713,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const printWindow = window.open('', '_blank');
                 if (printWindow) {
-                    printWindow.document.write('<html><head><title>Boletín de Calificaciones - ' + course + ' ' + parallel + '</title></head><body style="margin:0;">');
+                    printWindow.document.write('<html><head><title>Boletín de Calificaciones - ' + course + '</title></head><body style="margin:0;">');
                     printWindow.document.write(printContent);
                     printWindow.document.write('</body></html>');
                     printWindow.document.close();
+
+                    printWindow.onafterprint = () => { printWindow.close(); };
 
                     // Delaying print slightly to ensure render
                     setTimeout(() => {
                         printWindow.focus();
                         printWindow.print();
+                        if (printWindow) printWindow.close();
                     }, 500);
                 } else {
                     Swal.fire('Error', 'No se pudo abrir la ventana de impresión. Verifique los bloqueadores de ventanas emergentes (Pop-ups).', 'error');
@@ -1646,19 +1769,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAnnualGrades() {
         mainContent.innerHTML = `
             <div class="card mb-2">
-                <div class="grid grid-2 items-end">
+                <div style="margin-bottom: 10px;">
                     <div class="form-group mb-0">
-                        <label>Curso</label>
+                        <label>Curso y Paralelo</label>
                         <select id="ag-course" class="input">
-                            <option value="">Seleccione Curso</option>
-                            ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Paralelo</label>
-                        <select id="ag-parallel" class="input">
-                            <option value="">Seleccione Paralelo</option>
-                            ${PARALLELS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            <option value="">Seleccione Curso y Paralelo</option>
+                            ${getAvailableCourses().map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </div>
                 </div>
@@ -1671,11 +1787,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('btn-load-ag').addEventListener('click', () => {
             const course = document.getElementById('ag-course').value;
-            const parallel = document.getElementById('ag-parallel').value;
 
-            if (!course || !parallel) return Swal.fire('Error', 'Seleccione curso y paralelo', 'error');
+            if (!course) return Swal.fire('Error', 'Seleccione curso', 'error');
 
-            const students = sortStudents(window.db.getStudents().filter(s => s.course === course && s.parallel === parallel));
+            const students = sortStudents(window.db.getStudents().filter(s => s.course === course));
             const records = window.db.getRecords();
 
             if (students.length === 0) {
@@ -1712,7 +1827,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </style>
                 <div class="card" style="overflow-x: auto;">
                     <div class="flex justify-between items-center mb-1">
-                        <h3 style="color: #0f172a;">Calificaciones Finales Anuales - ${course} "${parallel}"</h3>
+                        <h3 style="color: #0f172a;">Calificaciones Finales Anuales - ${course}</h3>
                         <div style="display: flex; gap: 10px;">
                             <button class="btn btn-warning btn-sm" id="btn-top-students-ag"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg> Estudiantes Sobresalientes</button>
                             <button id="btn-print-ag" class="btn btn-sm btn-secondary flex items-center gap-1">
@@ -1795,26 +1910,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let listHtml = `<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px; text-align: left;">`;
                 top5.forEach((student, index) => {
-                    const bgColors = ['rgba(251, 191, 36, 0.15)', 'rgba(148, 163, 184, 0.15)', 'rgba(180, 83, 9, 0.15)', 'rgba(241, 245, 249, 1)', 'rgba(248, 250, 252, 1)'];
-                    const borderColors = ['#fbbf24', '#cbd5e1', '#b45309', '#e2e8f0', '#e2e8f0'];
-                    const fontColors = ['#d97706', '#475569', '#92400e', '#334155', '#475569'];
-                    const icons = index === 0 ? '🏆' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '🎖️'));
-
-                    const bg = bgColors[index] || bgColors[4];
-                    const border = borderColors[index] || borderColors[4];
-                    const fontColor = fontColors[index] || fontColors[4];
+                    const colors = [
+                        { bg: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '#fcd34d', text: '#b45309', icon: '#fbbf24', stroke: '#b45309' },
+                        { bg: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '#cbd5e1', text: '#475569', icon: '#e2e8f0', stroke: '#475569' },
+                        { bg: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', border: '#fdba74', text: '#c2410c', icon: '#f97316', stroke: '#9a3412' },
+                        { bg: '#ffffff', border: '#e2e8f0', text: '#64748b', icon: '#f8fafc', stroke: '#94a3b8' },
+                        { bg: '#ffffff', border: '#e2e8f0', text: '#64748b', icon: '#f8fafc', stroke: '#94a3b8' }
+                    ];
+                    const c = colors[index] || colors[4];
+                    const medalSVG = `
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 23L12 20L17 23V10H7V23Z" fill="${c.border}" stroke="${c.stroke}" stroke-width="1.5" stroke-linejoin="round"/>
+                            <circle cx="12" cy="9" r="8" fill="${c.icon}" stroke="${c.stroke}" stroke-width="1.5"/>
+                            <text x="12" y="12.5" text-anchor="middle" font-size="10" font-weight="800" fill="${c.stroke}" stroke="none" font-family="Inter, sans-serif">${index + 1}</text>
+                        </svg>`;
 
                     listHtml += `
-                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: ${bg}; border-left: 5px solid ${border}; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: transform 0.2s;">
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <span style="font-size: 1.8rem; line-height: 1;">${icons}</span>
-                                <div style="display: flex; flex-direction: column;">
-                                    <span style="font-weight: 700; font-size: 1.05rem; color: #0f172a;">${student.name}</span>
-                                    <span style="font-size: 0.80rem; font-weight: 600; color: ${fontColor}; text-transform: uppercase; letter-spacing: 0.5px;">Top ${index + 1}</span>
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: ${c.bg}; border: 1px solid ${c.border}; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 14px; overflow: hidden;">
+                                <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid ${c.border};">
+                                    ${medalSVG}
+                                </div>
+                                <div style="display: flex; flex-direction: column; overflow: hidden;">
+                                    <span style="font-weight: 800; font-size: 1.05rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${student.name}">${student.name}</span>
+                                    <span style="font-size: 0.75rem; font-weight: 700; color: ${c.text}; text-transform: uppercase; letter-spacing: 0.5px;">Puesto ${index + 1}</span>
                                 </div>
                             </div>
-                            <div style="display: flex; align-items: baseline; gap: 4px; background: white; padding: 6px 14px; border-radius: 9999px; font-weight: 800; color: ${fontColor}; font-size: 1.25rem; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                                ${student.average} <span style="font-size: 0.70rem; font-weight: 700; opacity: 0.7; letter-spacing: 0.5px;">Pts</span>
+                            <div style="display: flex; align-items: baseline; justify-content: center; gap: 3px; background: white; padding: 6px 14px; border-radius: 20px; font-weight: 900; color: ${c.text}; font-size: 1.25rem; border: 2px solid ${c.border}; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; white-space: nowrap;">
+                                ${student.average} <span style="font-size: 0.75rem; font-weight: 800; opacity: 0.8; letter-spacing: 0.5px;">Pts</span>
                             </div>
                         </div>
                     `;
@@ -1837,47 +1960,52 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-print-ag').addEventListener('click', () => {
                 const advisorName = students.length > 0 && students[0].advisorName && students[0].advisorName !== '-' ? students[0].advisorName : 'Sin Asignar';
                 const printWindow = window.open('', '_blank');
+                const scale = students.length > 18 ? 18 / students.length : 1;
                 let printContent = `
                     <html><head>
-                    <title>Reporte Anual - ${course} "${parallel}"</title>
+                    <title>Reporte Anual - ${course}</title>
                     <style>
+                        :root {
+                            --print-scale: ${scale};
+                        }
                         @page { size: letter landscape; margin: 0; }
                         @media print { 
                             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
-                            table { page-break-inside: auto; }
-                            tr { page-break-inside: avoid; page-break-after: auto; }
+                            .print-wrapper {
+                                zoom: var(--print-scale);
+                            }
                         }
-                        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 8.5px; margin: 0; color: #1e293b; background: white; line-height: 1.1; }
-                        h2 { text-align: center; text-transform: uppercase; margin: 0 0 6px 0; font-size: 15px; color: #0f172a; letter-spacing: 0.5px; font-weight: 800; }
+                        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 11px; margin: 0; color: #1e293b; background: white; line-height: 1.15; }
+                        h2 { text-align: center; text-transform: uppercase; margin: 0 0 6px 0; font-size: 18px; color: #0f172a; letter-spacing: 0.5px; font-weight: 800; }
                         .header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #cbd5e1; }
                         .header-col { display: flex; flex-direction: column; gap: 3px; }
-                        .info-text { font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+                        .info-text { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
                         table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-                        th, td { border: 1px solid #94a3b8; padding: 2px; text-align: center; line-height: 1.1; }
-                        th.header-group { background-color: #e2e8f0; font-weight: 800; padding: 4px; color: #0f172a; font-size: 9px; text-transform: uppercase; }
+                        th, td { border: 1px solid #94a3b8; padding: 4px 2px; text-align: center; line-height: 1.1; }
+                        th.header-group { background-color: #e2e8f0; font-weight: 800; padding: 5px; color: #0f172a; font-size: 12px; text-transform: uppercase; }
                         th.vertical-text {
                             writing-mode: vertical-rl;
                             transform: rotate(180deg);
                             white-space: nowrap;
-                            height: 100px;
-                            max-height: 100px;
-                            font-size: 8px;
-                            padding: 3px 0 !important;
+                            height: 130px;
+                            max-height: 130px;
+                            font-size: 11px;
+                            padding: 4px 0 !important;
                             background-color: #f8fafc;
                             color: #334155;
                             font-weight: 800;
                         }
-                        td.student-name { text-align: left; font-weight: 700; white-space: nowrap; padding-left: 4px; font-size: 8.5px; }
+                        td.student-name { text-align: left; font-weight: 700; white-space: nowrap; padding-left: 6px; font-size: 13px; }
                         .rojo { color: #dc2626 !important; font-weight: 800; }
                     </style>
                     </head><body>
-                    <div style="padding: 8mm;">
+                    <div class="print-wrapper" style="padding: 8mm; box-sizing: border-box;">
                     <h2>Cuadro Centralizador Final de Calificaciones Anuales</h2>
                     <div class="header-row">
                         <div class="header-col">
-                            <span class="info-text">Unidad Educativa: ${localStorage.getItem('instName') || 'No definida'}</span>
+                            <span class="info-text">Unidad Educativa: ${window.db.getSettings().unitName || 'No definida'}</span>
                             <span class="info-text">Nivel: Secundario</span>
-                            <span class="info-text" style="color: #0f172a; font-weight: 800;">Curso: ${course} "${parallel}"</span>
+                            <span class="info-text" style="color: #0f172a; font-weight: 800;">Curso: ${course}</span>
                         </div>
                         <div class="header-col" style="text-align: right;">
                             <span class="info-text">Gestión: ${new Date().getFullYear()}</span>
@@ -1887,8 +2015,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <table>
                         <thead>
                             <tr>
-                                <th rowspan="2" style="width: 2%;">N°</th>
-                                <th rowspan="2" style="width: 22%; font-size: 10px;">APELLIDOS Y NOMBRES</th>
+                                <th rowspan="2" style="width: 2%; font-size: 11px;">N°</th>
+                                <th rowspan="2" style="width: 25%; font-size: 11px;">APELLIDOS Y NOMBRES</th>
                                 <th colspan="${ACADEMIC_AREAS.length}" class="header-group">ÁREAS DE SABERES Y CONOCIMIENTOS</th>
                                 <th rowspan="2" class="vertical-text" style="background-color: #e0f2fe; color: #0369a1;">PROMEDIO ANUAL</th>
                                 <th rowspan="2" class="vertical-text" style="background-color: #fef2f2; color: #b91c1c;">ÁREAS REPROBADAS</th>
@@ -1942,9 +2070,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (printWindow) {
                     printWindow.document.write(printContent);
                     printWindow.document.close();
+
+                    printWindow.onafterprint = () => { printWindow.close(); };
+
                     setTimeout(() => {
                         printWindow.focus();
                         printWindow.print();
+                        if (printWindow) printWindow.close();
                     }, 500);
                 } else {
                     Swal.fire('Error', 'Debe permitir ventanas emergentes.', 'error');
@@ -1956,19 +2088,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAnnualPerformance() {
         mainContent.innerHTML = `
             <div class="card mb-2">
-                <div class="grid grid-2 items-end">
+                <div style="margin-bottom: 10px;">
                     <div class="form-group mb-0">
-                        <label>Curso</label>
+                        <label>Curso y Paralelo</label>
                         <select id="aperf-course" class="input">
-                            <option value="">Seleccione Curso</option>
-                            ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Paralelo</label>
-                        <select id="aperf-parallel" class="input">
-                            <option value="">Seleccione Paralelo</option>
-                            ${PARALLELS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            <option value="">Seleccione Curso y Paralelo</option>
+                            ${getAvailableCourses().map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </div>
                 </div>
@@ -1981,11 +2106,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('btn-load-aperf').addEventListener('click', () => {
             const course = document.getElementById('aperf-course').value;
-            const parallel = document.getElementById('aperf-parallel').value;
 
-            if (!course || !parallel) return Swal.fire('Error', 'Seleccione curso y paralelo', 'error');
+            if (!course) return Swal.fire('Error', 'Seleccione curso', 'error');
 
-            const students = sortStudents(window.db.getStudents().filter(s => s.course === course && s.parallel === parallel));
+            const students = sortStudents(window.db.getStudents().filter(s => s.course === course));
             const records = window.db.getRecords();
 
             if (students.length === 0) {
@@ -1997,16 +2121,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Comunicación y Lenguajes": "#ef4444",
                 "Lengua Extranjera": "#3b82f6",
                 "Ciencias Sociales": "#22c55e",
-                "Música": "#a855f7",
-                "Artes Plásticas": "#f97316",
                 "Educación Física": "#eab308",
-                "Matemáticas": "#14b8a6",
+                "Educación Musical": "#a855f7",
+                "Artes Plásticas": "#f97316",
+                "Matemática": "#14b8a6",
                 "Tecnología": "#6366f1",
+                "Ciencias Nat Bio-Geo": "#10b981",
                 "Física": "#06b6d4",
                 "Química": "#ec4899",
-                "Ciencias Naturales Biología": "#10b981",
-                "Filosofía / Psicología": "#f43f5e",
-                "Valores y Religiones": "#f59e0b"
+                "Cosmovisiones, Filo-Soc": "#f43f5e",
+                "Valores, Esp y Rel": "#f59e0b"
             };
 
             let html = `
@@ -2037,7 +2161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </style>
                 <div class="card" style="overflow-x: auto;">
                     <h3 class="mb-1 text-secondary" style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                        <span>Rendimiento Estudiantil (Notas < 51) - ${course} "${parallel}"</span>
+                        <span>Rendimiento Estudiantil (Notas < 51) - ${course}</span>
                         <span class="trim-highlight">FINAL ANUAL</span>
                     </h3>
                     <p class="text-sm text-muted mb-1">Este análisis identifica áreas reprobadas en base a las calificaciones finales anuales.</p>
@@ -2107,19 +2231,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderBestAverages() {
         mainContent.innerHTML = `
             <div class="card mb-2">
-                <div class="grid grid-2 items-end">
+                <div style="margin-bottom: 10px;">
                     <div class="form-group mb-0">
-                        <label>Curso</label>
+                        <label>Curso y Paralelo</label>
                         <select id="ba-course" class="input">
                             <option value="">Toda la Institución</option>
-                            ${COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Paralelo</label>
-                        <select id="ba-parallel" class="input">
-                            <option value="">Todos los Paralelos</option>
-                            ${PARALLELS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            ${getAvailableCourses().map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </div>
                 </div>
@@ -2132,11 +2249,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('btn-load-ba').addEventListener('click', () => {
             const course = document.getElementById('ba-course').value;
-            const parallel = document.getElementById('ba-parallel').value;
 
             let students = window.db.getStudents();
             if (course) students = students.filter(s => s.course === course);
-            if (parallel) students = students.filter(s => s.parallel === parallel);
 
             const records = window.db.getRecords();
 
@@ -2176,7 +2291,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 return {
                     name: s.fullName,
-                    course: `${s.course} "${s.parallel}"`,
+                    course: `${s.course}`,
                     p1: countP1 > 0 ? Math.round(sumP1 / countP1) : 0,
                     p2: countP2 > 0 ? Math.round(sumP2 / countP2) : 0,
                     p3: countP3 > 0 ? parseFloat((sumP3 / countP3).toFixed(2)) : 0
@@ -2234,8 +2349,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // INIT
     db.onReady(() => {
-        const instName = localStorage.getItem('instName');
-        if (instName) document.querySelector('.institution-name-display').textContent = instName;
+        const currentName = window.db.getSettings().unitName;
+        if (currentName) {
+            document.querySelectorAll('.institution-name-display').forEach(el => el.textContent = currentName);
+        }
         checkAuth();
     });
 });

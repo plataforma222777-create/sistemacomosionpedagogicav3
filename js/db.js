@@ -55,6 +55,7 @@ class Database {
                 this._setupListeners('students');
                 this._setupListeners('records');
                 this._setupListeners('preliminaries');
+                this._setupSettingsListener();
             } catch (error) {
                 console.error("Error setting up Firebase listeners:", error);
             }
@@ -98,13 +99,53 @@ class Database {
         this.unsubscribers[table] = unsub;
     }
 
+    _setupSettingsListener() {
+        if (!this.currentInstId) return;
+        
+        if (this.unsubscribers && this.unsubscribers['settings']) {
+            this.unsubscribers['settings']();
+        }
+
+        const unsub = onSnapshot(doc(firestoreDb, `institutions/${this.currentInstId}/settings`, 'config'), (docSnap) => {
+            if (docSnap.exists()) {
+                this.cache.settings = docSnap.data();
+                localStorage.setItem(`${DB_PREFIX}${this.currentInstId}_settings`, JSON.stringify(this.cache.settings));
+                window.dispatchEvent(new CustomEvent('settings-updated', { detail: this.cache.settings }));
+                
+                // Update UI automatically
+                document.querySelectorAll('.institution-name-display').forEach(el => {
+                    el.textContent = this.cache.settings.unitName || 'Unidad Educativa';
+                });
+            }
+        }, (error) => {
+            console.warn(`Error escuchando cambios de settings:`, error);
+        });
+
+        this.unsubscribers = this.unsubscribers || {};
+        this.unsubscribers['settings'] = unsub;
+    }
+
     onReady(cb) {
         if (this.ready) cb();
         else this.onReadyCallbacks.push(cb);
     }
 
     _getTable(table) {
-        return this.cache[table] || [];
+        const legacyMap = {
+            "Música": "Educación Musical",
+            "Matemáticas": "Matemática",
+            "Ciencias Naturales Biología": "Ciencias Nat Bio-Geo",
+            "Filosofía / Psicología": "Cosmovisiones, Filo-Soc",
+            "Valores y Religiones": "Valores, Esp y Rel"
+        };
+        let data = this.cache[table] || [];
+        if (table === 'records' || table === 'preliminaries') {
+            data = data.map(item => ({
+                ...item,
+                area: legacyMap[item.area] || item.area
+            }));
+        }
+        return data;
     }
 
     _saveTable(table, data) {
@@ -142,6 +183,7 @@ class Database {
                     this._setupListeners('students');
                     this._setupListeners('records');
                     this._setupListeners('preliminaries');
+                    this._setupSettingsListener();
                 } catch (error) {
                     console.error("Error setting up Firebase listeners during login:", error);
                 }
@@ -292,6 +334,11 @@ class Database {
 
         if (this.currentInstId) {
              localStorage.setItem(`${DB_PREFIX}${this.currentInstId}_settings`, JSON.stringify(this.cache.settings));
+             if (firestoreDb) {
+                 setDoc(doc(firestoreDb, `institutions/${this.currentInstId}/settings`, 'config'), this.cache.settings).catch(e => {
+                     console.error("Error syncing settings to Firebase:", e);
+                 });
+             }
         }
         return this.cache.settings;
     }
