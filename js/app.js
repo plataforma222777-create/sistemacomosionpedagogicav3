@@ -914,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let combinedAreas = Array.from(new Set([...sRecords.map(r => r.area), ...sPrelims.map(p => p.area)]));
                 combinedAreas.sort((a, b) => ACADEMIC_AREAS.indexOf(a) - ACADEMIC_AREAS.indexOf(b));
 
-                let barsHtml = `<div style="display: flex; gap: 4px; flex-wrap: wrap; min-height: 48px; border-left: 2px solid #cbd5e1; padding-left: 8px;">`;
+                let barsHtml = `<div class="area-badge-container">`;
 
                 if (combinedAreas.length === 0) {
                     barsHtml += `<span class="text-muted text-xs" style="display: flex; align-items: center; padding-left: 8px;">No registrado o Sin áreas reprobadas</span>`;
@@ -922,8 +922,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     combinedAreas.forEach(areaName => {
                         const bg = AREA_COLORS[areaName] || '#64748b';
                         barsHtml += `
-                            <div class="area-block-hover" style="flex: 0 0 90px; width: 90px; background-color: ${bg}; color: white; padding: 6px 4px; border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
-                                <div style="font-size: 0.70rem; font-weight: bold; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 1px 1px rgba(0,0,0,0.4);" title="${areaName}">${areaName}</div>
+                            <div class="area-badge-card no-grade" style="background-color: ${bg};">
+                                <div class="area-badge-title" title="${areaName}">${areaName}</div>
                             </div>
                         `;
                     });
@@ -1385,7 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 sRecords.sort((a, b) => ACADEMIC_AREAS.indexOf(a.area) - ACADEMIC_AREAS.indexOf(b.area));
 
-                let barsHtml = `<div style="display: flex; gap: 6px; flex-wrap: wrap; min-height: 48px; border-left: 2px solid #cbd5e1; padding-left: 8px; white-space: normal;">`;
+                let barsHtml = `<div class="area-badge-container">`;
 
                 if (sRecords.length === 0) {
                     barsHtml += `<span class="text-muted text-xs" style="display: flex; align-items: center; padding-left: 8px;">Sin notas reprobadas en este trimestre</span>`;
@@ -1393,9 +1393,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     sRecords.forEach(rec => {
                         const bg = AREA_COLORS[rec.area] || '#64748b';
                         barsHtml += `
-                            <div class="area-block-hover" style="flex: 0 0 90px; width: 90px; background-color: ${bg}; color: white; padding: 6px 4px; border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.15); white-space: normal; overflow: hidden;">
-                                <div style="font-size: 0.65rem; font-weight: bold; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 1px 1px rgba(0,0,0,0.4); word-break: break-word; width: 100%; white-space: pre-wrap;" title="${rec.area}">${rec.area}</div>
-                                <div style="font-size: 1.1rem; font-weight: 900; background: rgba(0,0,0,0.25); border-radius: 4px; padding: 1px 12px; margin-top: 4px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);">${rec.grade}</div>
+                            <div class="area-badge-card" style="background-color: ${bg};">
+                                <div class="area-badge-title" title="${rec.area}">${rec.area}</div>
+                                <div class="area-badge-grade">${rec.grade}</div>
                             </div>
                         `;
                     });
