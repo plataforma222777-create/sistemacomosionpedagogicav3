@@ -329,8 +329,9 @@ class Database {
     updateSettings(config) {
         this.cache.settings = { ...this.cache.settings, ...config };
         
-        let safeConfig = Security.sanitizeHTML ? { unitName: Security.sanitizeHTML(this.cache.settings.unitName) } : this.cache.settings;
-        this.cache.settings = safeConfig;
+        if (Security.sanitizeHTML && this.cache.settings.unitName) {
+            this.cache.settings.unitName = Security.sanitizeHTML(this.cache.settings.unitName);
+        }
 
         if (this.currentInstId) {
              localStorage.setItem(`${DB_PREFIX}${this.currentInstId}_settings`, JSON.stringify(this.cache.settings));
@@ -340,6 +341,7 @@ class Database {
                  });
              }
         }
+        window.dispatchEvent(new CustomEvent('settings-updated', { detail: this.cache.settings }));
         return this.cache.settings;
     }
 }

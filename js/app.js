@@ -15,12 +15,49 @@ document.addEventListener('DOMContentLoaded', () => {
     // Chart Instance
     let dashboardChartInstance = null;
 
+    function updateSidebarVisibility() {
+        const settings = window.db.getSettings();
+        
+        const isEnabled = (type) => {
+            if (!settings.periods) return false;
+            
+            const d = new Date();
+            const today = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            
+            for (let i = 1; i <= 3; i++) {
+                const trim = settings.periods[i];
+                if (!trim) continue;
+                const start = trim[`${type}_start`];
+                const end = trim[`${type}_end`];
+                if (start && end && today >= start && today <= end) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        const prelimItem = document.querySelector('a[data-view="preliminary"]');
+        const gradesItem = document.querySelector('a[data-view="general-grades"]');
+
+        if (prelimItem) {
+            prelimItem.style.display = isEnabled('preliminar') ? '' : 'none';
+        }
+        if (gradesItem) {
+            gradesItem.style.display = isEnabled('calificaciones') ? '' : 'none';
+        }
+    }
+
+    window.addEventListener('settings-updated', () => {
+        updateSidebarVisibility();
+    });
+
     function checkAuth() {
         const user = window.db.getCurrentUser();
         if (user) {
             authSection.classList.add('hidden');
             appSection.classList.remove('hidden');
             document.querySelectorAll('.institution-name-display').forEach(el => el.textContent = window.db.getSettings().unitName || 'Unidad Educativa');
+            updateSidebarVisibility();
             loadView('dashboard');
         } else {
             authSection.classList.remove('hidden');
@@ -714,6 +751,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const isPrelimEnabled = (trim) => {
+                const settings = window.db.getSettings();
+                if (!settings.periods || !settings.periods[trim]) return false;
+                const start = settings.periods[trim].preliminar_start;
+                const end = settings.periods[trim].preliminar_end;
+                if (!start || !end) return false;
+                
+                const d = new Date();
+                const today = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                return today >= start && today <= end;
+            };
+
+            const enabled1 = isPrelimEnabled(1);
+            const enabled2 = isPrelimEnabled(2);
+            const enabled3 = isPrelimEnabled(3);
+
+            const msg = [];
+            if (!enabled1) msg.push('1er Trimestre');
+            if (!enabled2) msg.push('2do Trimestre');
+            if (!enabled3) msg.push('3er Trimestre');
+            const lockMsg = msg.length > 0 ? `<div style="color: #dc2626; font-size: 0.85rem; margin-top: 8px; display: flex; align-items: center; gap: 5px;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg> Registro bloqueado para: <strong>${msg.join(', ')}</strong> (Fuera de periodo habilitado)</div>` : '';
+
             let html = `
                 <div class="card">
                     <div style="margin-bottom: 20px;">
@@ -726,13 +785,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span style="background-color: #8b5cf6; color: white; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 0.95em; box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3); border: 1px solid #7c3aed;">
                                     ${area}
                                 </span>
-                                <button id="btn-save-preliminary" class="btn btn-secondary flex items-center justify-center gap-1" style="font-size: 1.05rem; padding: 8px 15px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25); min-width: max-content; background-color: #0284c7; border-color: #0284c7;">
+                                <button id="btn-save-preliminary" class="btn btn-secondary flex items-center justify-center gap-1" style="font-size: 1.05rem; padding: 8px 15px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25); min-width: max-content; background-color: ${msg.length === 3 ? '#94a3b8' : '#0284c7'}; border-color: ${msg.length === 3 ? '#94a3b8' : '#0284c7'}; cursor: ${msg.length === 3 ? 'not-allowed' : 'pointer'};" ${msg.length === 3 ? 'disabled' : ''}>
                                     <svg width="20" height="20" fill="none" class="mr-1" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
                                    Guardar 
                                 </button>
                             </div>
                         </div>
                         <p class="text-sm text-muted mb-0 mt-1">Permite registrar el rendimiento preliminar de los estudiantes. Marque con "X" a los estudiantes que presentan bajo rendimiento en el trimestre correspondiente y presione <strong>Guardar</strong>.</p>
+                        ${lockMsg}
                     </div>
                     <table class="table">
                         <thead>
@@ -758,13 +818,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${idx + 1}</td>
                         <td class="font-bold">${s.fullName}</td>
                         <td class="text-center">
-                            <input type="checkbox" class="cb-prelim" data-id="${s.id}" data-trim="1" style="transform: scale(1.5)" ${r1.preliminary ? 'checked' : ''}>
+                            <input type="checkbox" class="cb-prelim" data-id="${s.id}" data-trim="1" style="transform: scale(1.5)" ${r1.preliminary ? 'checked' : ''} ${!enabled1 ? 'disabled' : ''}>
                         </td>
                         <td class="text-center">
-                            <input type="checkbox" class="cb-prelim" data-id="${s.id}" data-trim="2" style="transform: scale(1.5)" ${r2.preliminary ? 'checked' : ''}>
+                            <input type="checkbox" class="cb-prelim" data-id="${s.id}" data-trim="2" style="transform: scale(1.5)" ${r2.preliminary ? 'checked' : ''} ${!enabled2 ? 'disabled' : ''}>
                         </td>
                         <td class="text-center">
-                            <input type="checkbox" class="cb-prelim" data-id="${s.id}" data-trim="3" style="transform: scale(1.5)" ${r3.preliminary ? 'checked' : ''}>
+                            <input type="checkbox" class="cb-prelim" data-id="${s.id}" data-trim="3" style="transform: scale(1.5)" ${r3.preliminary ? 'checked' : ''} ${!enabled3 ? 'disabled' : ''}>
                         </td>
                     </tr>
                 `;
@@ -775,8 +835,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.getElementById('preliminary-container').innerHTML = html;
 
+            document.querySelectorAll('.cb-prelim').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const studentId = parseInt(e.target.dataset.id);
+                    const trim = parseInt(e.target.dataset.trim);
+                    const isChecked = e.target.checked;
+
+                    window.db.upsertPreliminary({
+                        studentId: studentId,
+                        area: area,
+                        trimester: trim,
+                        preliminary: isChecked
+                    });
+                });
+            });
+
             document.getElementById('btn-save-preliminary').addEventListener('click', () => {
-                const checkboxes = document.querySelectorAll('.cb-prelim');
+                const checkboxes = document.querySelectorAll('.cb-prelim:not([disabled])');
                 checkboxes.forEach(cb => {
                     const studentId = parseInt(cb.dataset.id);
                     const trim = parseInt(cb.dataset.trim);
@@ -797,6 +872,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     timer: 2000,
                     showConfirmButton: false
                 });
+
+                document.getElementById('preliminary-container').innerHTML = '';
+                document.getElementById('sel-course').value = '';
             });
         };
 
@@ -1460,6 +1538,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const isCalificacionesEnabled = (trim) => {
+                const settings = window.db.getSettings();
+                if (!settings.periods || !settings.periods[trim]) return false;
+                const start = settings.periods[trim].calificaciones_start;
+                const end = settings.periods[trim].calificaciones_end;
+                if (!start || !end) return false;
+                
+                const d = new Date();
+                const today = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                return today >= start && today <= end;
+            };
+
+            const enabled1 = isCalificacionesEnabled(1);
+            const enabled2 = isCalificacionesEnabled(2);
+            const enabled3 = isCalificacionesEnabled(3);
+
+            const msg = [];
+            if (!enabled1) msg.push('1er Trimestre');
+            if (!enabled2) msg.push('2do Trimestre');
+            if (!enabled3) msg.push('3er Trimestre');
+            const lockMsg = msg.length > 0 ? `<div style="color: #dc2626; font-size: 0.85rem; margin-top: 8px; display: flex; align-items: center; gap: 5px;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg> Registro bloqueado para: <strong>${msg.join(', ')}</strong> (Fuera de periodo habilitado)</div>` : '';
+
             let html = `
                 <div class="card">
                     <div style="margin-bottom: 20px;">
@@ -1472,13 +1572,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span style="background-color: #8b5cf6; color: white; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 0.95em; box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3); border: 1px solid #7c3aed;">
                                     ${area}
                                 </span>
-                                <button id="btn-save-gg" class="btn btn-secondary flex items-center justify-center gap-1" style="font-size: 1.05rem; padding: 8px 15px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25); min-width: max-content;">
+                                <button id="btn-save-gg" class="btn btn-secondary flex items-center justify-center gap-1" style="font-size: 1.05rem; padding: 8px 15px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25); min-width: max-content; background-color: ${msg.length === 3 ? '#94a3b8' : '#10b981'}; border-color: ${msg.length === 3 ? '#94a3b8' : '#10b981'}; cursor: ${msg.length === 3 ? 'not-allowed' : 'pointer'};" ${msg.length === 3 ? 'disabled' : ''}>
                                     <svg width="20" height="20" fill="none" class="mr-1" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
                                    Guardar 
                                 </button>
                             </div>
                         </div>
                         <p class="text-sm text-muted mb-0 mt-1">Permite registrar notas completas de todos los estudiantes. Puedes <strong>pegar calificaciones directamente desde Excel</strong> seleccionando la primera celda.</p>
+                        ${lockMsg}
                     </div>
                     <table class="table">
                         <thead>
@@ -1500,10 +1601,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const r2 = sRecords.find(r => r.trimester === 2) || {};
                 const r3 = sRecords.find(r => r.trimester === 3) || {};
 
-                const getGradeInput = (trim, rObj) => {
+                const getGradeInput = (trim, rObj, isEnabled) => {
                     const gradeVal = (rObj.grade !== undefined && rObj.grade !== "") ? rObj.grade : "";
                     const warningStyle = gradeVal !== "" && gradeVal < 51 ? "border-color: #dc2626; color: #dc2626; font-weight: bold;" : "";
-                    return `<input type="number" class="input input-grade-gg" data-row-index="${i}" data-sid="${s.id}" data-trim="${trim}" value="${gradeVal}" style="${warningStyle} text-align: center; padding: 4px; border-radius: 4px; width: 60px;" min="1" max="100">`;
+                    const disabledAttr = !isEnabled ? 'readonly ' : '';
+                    const bgStyle = !isEnabled ? 'background-color: #f1f5f9; cursor: not-allowed; ' : '';
+                    return `<input type="number" class="input input-grade-gg" data-row-index="${i}" data-sid="${s.id}" data-trim="${trim}" value="${gradeVal}" ${disabledAttr}style="${bgStyle}${warningStyle} text-align: center; padding: 4px; border-radius: 4px; width: 60px;" min="1" max="100">`;
                 };
 
                 let initAvg = "-";
@@ -1516,9 +1619,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <td>${i + 1}</td>
                         <td class="font-bold">${s.fullName}</td>
-                        <td class="text-center">${getGradeInput(1, r1)}</td>
-                        <td class="text-center">${getGradeInput(2, r2)}</td>
-                        <td class="text-center">${getGradeInput(3, r3)}</td>
+                        <td class="text-center">${getGradeInput(1, r1, enabled1)}</td>
+                        <td class="text-center">${getGradeInput(2, r2, enabled2)}</td>
+                        <td class="text-center">${getGradeInput(3, r3, enabled3)}</td>
                         <td class="text-center"><span id="avg-${s.id}" class="avg-label" style="font-size: 1.1rem; font-weight: bold; ${avgStyle}">${initAvg}</span></td>
                     </tr>
                 `;
@@ -1588,7 +1691,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const targetCol = startCol + cIdx;
                             const targetInput = document.querySelector(`.input-grade-gg[data-row-index="${targetRow}"][data-trim="${targetCol}"]`);
 
-                            if (targetInput) {
+                            if (targetInput && !targetInput.readOnly) {
                                 let pastedVal = colVal.trim();
                                 // Si Excel exporta '0' debido a fórmulas o celdas vacías, lo forzamos a nulo/vacío
                                 if (pastedVal === "0") pastedVal = "";
@@ -1602,7 +1705,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             document.getElementById('btn-save-gg').addEventListener('click', () => {
-                const inputs = document.querySelectorAll('.input-grade-gg');
+                const inputs = document.querySelectorAll('.input-grade-gg:not([readonly])');
                 inputs.forEach(input => {
                     const sid = parseInt(input.dataset.sid);
                     const trim = parseInt(input.dataset.trim);
@@ -1747,6 +1850,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <button type="submit" class="btn btn-primary">Guardar Configuración</button>
                 </form>
+
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="font-weight: 700; margin: 0; color: #1e293b;">Panel de Administrador</h4>
+                        <p class="text-sm text-muted" style="margin: 0;">Configuración de periodos de registro para docentes</p>
+                    </div>
+                    <button id="btn-admin-panel" class="btn btn-outline" style="border-color: #dc2626; color: #dc2626; display: flex; align-items: center; gap: 5px;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        Administrador
+                    </button>
+                </div>
             </div>
         `;
 
@@ -1758,11 +1873,100 @@ document.addEventListener('DOMContentLoaded', () => {
             Swal.fire('Guardado', 'Configuración actualizada para esta institución', 'success');
         });
 
+        document.getElementById('btn-admin-panel').addEventListener('click', () => {
+            Swal.fire({
+                title: 'Acceso de Administrador',
+                input: 'password',
+                inputPlaceholder: 'Ingrese la contraseña',
+                showCancelButton: true,
+                confirmButtonText: 'Ingresar',
+                cancelButtonText: 'Cancelar'
+            }).then(res => {
+                if (res.isConfirmed) {
+                    if (res.value === 'admin') {
+                        showAdminPanel();
+                    } else {
+                        Swal.fire('Error', 'Contraseña incorrecta', 'error');
+                    }
+                }
+            });
+        });
+
         // Initialize display across app
         const currentName = window.db.getSettings().unitName;
         if (currentName) {
             document.querySelectorAll('.institution-name-display').forEach(el => el.textContent = currentName);
         }
+    }
+
+    function showAdminPanel() {
+        const settings = window.db.getSettings();
+        const periods = settings.periods || {};
+
+        let html = `<div style="text-align: left; max-height: 60vh; overflow-y: auto; padding-right: 10px;">`;
+        [1, 2, 3].forEach(trim => {
+            const p = periods[trim] || {};
+            html += `
+                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;">
+                    <h4 style="font-weight: 800; margin-bottom: 15px; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px;">${trim}er Trimestre</h4>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong style="display: block; font-size: 0.9em; margin-bottom: 8px; color: #475569;">Registro Preliminar</strong>
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.8em; color: #64748b; display: block; margin-bottom: 2px;">Inicio</label>
+                                <input type="date" id="p_start_${trim}" class="input" value="${p.preliminar_start || ''}" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.8em; color: #64748b; display: block; margin-bottom: 2px;">Fin</label>
+                                <input type="date" id="p_end_${trim}" class="input" value="${p.preliminar_end || ''}" style="width: 100%; padding: 6px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <strong style="display: block; font-size: 0.9em; margin-bottom: 8px; color: #475569;">Registro de Calificaciones</strong>
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.8em; color: #64748b; display: block; margin-bottom: 2px;">Inicio</label>
+                                <input type="date" id="c_start_${trim}" class="input" value="${p.calificaciones_start || ''}" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.8em; color: #64748b; display: block; margin-bottom: 2px;">Fin</label>
+                                <input type="date" id="c_end_${trim}" class="input" value="${p.calificaciones_end || ''}" style="width: 100%; padding: 6px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+
+        Swal.fire({
+            title: 'Configuración de Periodos',
+            html: html,
+            width: '600px',
+            showCancelButton: true,
+            confirmButtonText: 'Guardar Cambios',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const newPeriods = {};
+                [1, 2, 3].forEach(trim => {
+                    newPeriods[trim] = {
+                        preliminar_start: document.getElementById(`p_start_${trim}`).value,
+                        preliminar_end: document.getElementById(`p_end_${trim}`).value,
+                        calificaciones_start: document.getElementById(`c_start_${trim}`).value,
+                        calificaciones_end: document.getElementById(`c_end_${trim}`).value,
+                    };
+                });
+                return newPeriods;
+            }
+        }).then(res => {
+            if (res.isConfirmed) {
+                window.db.updateSettings({ periods: res.value });
+                Swal.fire('Guardado', 'Los periodos han sido actualizados', 'success');
+            }
+        });
     }
 
     // --- ANNUAL DASHBOARD ---
